@@ -1,0 +1,3 @@
+config:
+  azure-native:location: WestUS2
+  aws:region: us-east-1
