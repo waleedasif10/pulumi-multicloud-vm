@@ -71,11 +71,6 @@
  pulumi stack output primaryStorageKey
  ```
 
- ## Next Steps
-
- - Extend this template by adding more Azure Native resources (e.g., Networking, App Services)
- - Modularize your stack with Pulumi Components for reusable architectures
- - Integrate with CI/CD pipelines (GitHub Actions, Azure DevOps, etc.)
 
  ## Getting Help
 
