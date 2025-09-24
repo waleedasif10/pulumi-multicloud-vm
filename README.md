@@ -1,80 +1,175 @@
- # Azure Native TypeScript Pulumi Template
+# Pulumi Multi-Cloud VM Deployment
 
- This template provides a minimal, ready-to-go Pulumi program for deploying Azure resources using the Azure Native provider in TypeScript. It establishes a basic infrastructure stack that you can use as a foundation for more complex deployments.
+This project demonstrates a **reusable Pulumi module**, published on **npm** as `pulumi-multicloud-vm`, that provisions virtual machines on **AWS** (EC2) and **Azure** (Virtual Machine) using TypeScript. It also includes a client project that consumes the module to deploy VMs with minimal code.
 
- ## When to Use This Template
+---
 
- - You need a quick boilerplate for Azure Native deployments with Pulumi and TypeScript
- - You want to create a Resource Group and Storage Account as a starting point
- - You’re exploring Pulumi’s Azure Native SDK and TypeScript support
+## Project Overview
 
- ## Prerequisites
+### Goals
 
- - An active Azure subscription
- - Node.js (LTS) installed
- - A Pulumi account and CLI already installed and configured
- - Azure credentials available (e.g., via `az login` or environment variables)
+* Provision **1 AWS EC2 instance** + **1 Azure VM** with a reusable Pulumi component.
+* Accept configurable inputs (instance size, region, OS image).
+* Allow multi-cloud deployments from a single module.
+* Demonstrate module consumption in a separate client project.
 
- ## Usage
+### Key Features
 
- Scaffold a new project from the Pulumi registry template:
- ```bash
- pulumi new azure-typescript
- ```
+* Self-contained Pulumi component for multi-cloud VM deployment.
+* Supports input variables for both AWS and Azure VM specifications.
+* Clean separation between module and client project.
+* Designed for reusability and can be imported directly from **npm**.
 
- Follow the prompts to:
- 1. Name your project and stack
- 2. (Optionally) override the default Azure location
+---
 
- Once the project is created:
- ```bash
- cd <your-project-name>
- pulumi config set azure-native:location <your-region>
- pulumi up
- ```
+## Project Structure
 
- ## Project Layout
+```
+.
+├── Pulumi.yaml              # Pulumi project configuration
+├── index.ts                 # Entry point for deploying via client project
+├── package.json             # Node.js dependencies and metadata
+├── tsconfig.json            # TypeScript compiler configuration
+└── src/                     # Source code for the reusable module
+    ├── multicloud.ts        # MultiCloudVM component resource
+    └── types.ts             # Config and output type definitions
+```
 
- ```
- .
- ├── Pulumi.yaml       # Project metadata & template configuration
- ├── index.ts          # Main Pulumi program defining resources
- ├── package.json      # Node.js dependencies and project metadata
- └── tsconfig.json     # TypeScript compiler options
- ```
+---
 
- ## Configuration
+## Installing the Module
 
- Pulumi configuration lets you customize deployment parameters.
+The module is published on **npm**:
 
- - **azure-native:location** (string)
-   - Description: Azure region to provision resources in
-   - Default: `WestUS2`
+```bash
+npm install pulumi-multicloud-vm
+```
 
- Set a custom location before deployment:
- ```bash
- pulumi config set azure-native:location eastus
- ```
+You can now import and use it in any Pulumi project:
 
- ## Resources Created
+```ts
+import { MultiCloudVM, Config } from "pulumi-multicloud-vm";
 
- 1. **Resource Group**: A container for all other resources
- 2. **Storage Account**: A StorageV2 account with Standard_LRS SKU
+const cfg: Config = {
+    name: "demo-multicloud",
+    aws: {
+        region: "us-east-1",
+        instanceType: "t3.micro",
+        ami: "ami-08c40ec9ead489470",
+        allowssh: true,
+        allowhttp: true,
+    },
+    azure: {
+        location: "eastus",
+        vmSize: "Standard_B1s",
+        adminUsername: "testadmin",
+        adminPassword: "Password1234!",
+        allowssh: true,
+        allowhttp: true,
+        imagePublisher: "Canonical",
+        imageOffer: "UbuntuServer",
+        imageSku: "18.04-LTS",
+        imageVersion: "latest",
+    },
+};
 
- ## Outputs
+const multiCloud = new MultiCloudVM("demo-vm", cfg);
 
- After `pulumi up`, the following output is exported:
- - **primaryStorageKey**: The primary access key for the created Storage Account
+export const outputs = multiCloud.outputs;
+```
 
- Retrieve it with:
- ```bash
- pulumi stack output primaryStorageKey
- ```
+---
+
+## Usage
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure Pulumi
+
+Set AWS and Azure credentials before running deployments:
+
+```bash
+# Azure
+az login
+pulumi config set azure-native:location eastus
+
+# AWS
+export AWS_ACCESS_KEY_ID=<your-access-key>
+export AWS_SECRET_ACCESS_KEY=<your-secret-key>
+pulumi config set aws:region us-east-1
+```
+
+### 3. Deploy the Multi-Cloud VM
+
+```bash
+pulumi up
+```
+
+---
+
+## Configuration Options
+
+### AWS VM
+
+* `region`: AWS region
+* `instanceType`: EC2 instance type (e.g., `t3.micro`)
+* `ami`: Amazon Machine Image ID
+* `allowssh`: Open port 22
+* `allowhttp`: Open port 80
+
+### Azure VM
+
+* `location`: Azure region
+* `vmSize`: VM size (e.g., `Standard_B1s`)
+* `adminUsername` / `adminPassword`: VM login credentials
+* `allowssh`: Open port 22
+* `allowhttp`: Open port 80
+* `imagePublisher`, `imageOffer`, `imageSku`, `imageVersion`: OS image details
+
+---
+
+## Outputs
+
+After deployment, Pulumi exports:
+
+```json
+{
+  "aws": {
+    "instanceId": "<EC2-instance-id>",
+    "publicIp": "<EC2-public-ip>"
+  },
+  "azure": {
+    "vmId": "<Azure-VM-resource-id>",
+    "publicIp": "<Azure-VM-public-ip>"
+  }
+}
+```
+
+Retrieve via:
+
+```bash
+pulumi stack output
+```
+
+---
+
+## Notes
+
+* This module is reusable; you can import it into other projects using `npm install pulumi-multicloud-vm`.
+* All multi-cloud logic is contained in `src/multicloud.ts`.
+* Sensitive credentials (like passwords or AWS secrets) should be stored securely (Pulumi secrets or environment variables).
+
+---
+
+## References
+
+* [Pulumi Docs](https://www.pulumi.com/docs/)
+* [AWS Provider](https://www.pulumi.com/docs/intro/cloud-providers/aws/)
+* [Azure Native Provider](https://www.pulumi.com/docs/intro/cloud-providers/azure-native/)
+* [TypeScript Support](https://www.pulumi.com/docs/get-started/lang-typescript/)
 
 
- ## Getting Help
-
- If you have questions or run into issues:
- - Explore the Pulumi docs: https://www.pulumi.com/docs/
- - Join the Pulumi Community on Slack: https://pulumi-community.slack.com/
- - File an issue on the Pulumi Azure Native SDK GitHub: https://github.com/pulumi/pulumi-azure-native/issues
